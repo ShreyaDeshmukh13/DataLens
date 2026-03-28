@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block topbar_name %}Data Cleaning{% endblock %}
+
+{% block content %}
+{% if not has_data %}
+<div class="card empty-state">
+    <div class="empty-icon">📂</div>
+    <h3>No dataset loaded</h3>
+    <p>Please <a href="/">upload a CSV file</a> first.</p>
+</div>
+{% else %}
+
+<div class="page-title">Data Cleaning</div>
+
+{% if not cleaned %}
+<div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="metric-card" style="border-left: 3px solid var(--accent-pink);">
+        <div class="metric-title">DUPLICATE ROWS</div>
+        <div class="metric-value" style="color: var(--accent-pink);">{{ issues.duplicates }}</div>
+    </div>
+    <div class="metric-card" style="border-left: 3px solid var(--accent-yellow);">
+        <div class="metric-title">MISSING VALUES</div>
+        <div class="metric-value" style="color: var(--accent-yellow);">{{ issues.total_missing }}</div>
+    </div>
+    <div class="metric-card" style="border-left: 3px solid var(--accent-purple);">
+        <div class="metric-title">TYPE ISSUES</div>
+        <div class="metric-value" style="color: var(--accent-purple);">{{ issues.type_issues }}</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Before Cleaning Preview</h2>
+        </div>
+        <div class="table-container">
+            {{ preview_html|safe }}
+        </div>
+    </div>
+    
+    <div>
+        <div class="card" style="background: rgba(139,92,246,0.05); border-color: rgba(139,92,246,0.3);">
+            <div class="card-header">
+                <h2 class="card-title">One-Click Optimization</h2>
+            </div>
+            <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:24px; line-height:1.6;">
+                Automatically remove duplicates, impute missing values with statistical averages, and correct data types across the entire dataset.
+            </p>
+            <form method="POST" action="/clean">
+                <button type="submit" class="btn btn-purple btn-full" style="padding:16px; font-size:1.05rem;">
+                    ✨ Clean Everything
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if cleaned and report %}
+<div class="card" style="border-left: 4px solid var(--accent-green);">
+    <div class="card-header">
+        <h2 class="card-title" style="color: var(--accent-green);">Dataset Optimized Successfully</h2>
+    </div>
+
+    <!-- Activity Style Report -->
+    <div class="activity-list" style="margin-bottom: 32px;">
+        <div class="activity-item">
+            <div class="activity-icon" style="color: var(--accent-green); background: rgba(34,197,94,0.1);">✓</div>
+            <div class="activity-info">
+                <div class="activity-title">Duplicates Handled</div>
+                <div class="activity-desc">{{ report.duplicates_removed }} duplicate rows removed.</div>
+            </div>
+        </div>
+        
+        {% if report.missing_changes %}
+        <div class="activity-item">
+            <div class="activity-icon" style="color: var(--accent-cyan); background: rgba(34,211,238,0.1);">🩹</div>
+            <div class="activity-info">
+                <div class="activity-title">Missing Values Imputed</div>
+                <div class="activity-desc">
+                    {% for col, info in report.missing_changes.items() %}{{ col }}: {{ info.count }} vals, {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="activity-item">
+            <div class="activity-icon" style="color: var(--accent-purple); background: rgba(139,92,246,0.1);">📐</div>
+            <div class="activity-info">
+                <div class="activity-title">Dataset Reduced</div>
+                <div class="activity-desc">Final size: {{ report.final_shape.rows }} rows × {{ report.final_shape.columns }} columns.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Cleaned Data Preview</h2>
+        <span class="badge green">Live</span>
+    </div>
+    <div class="table-container">
+        {{ preview_html|safe }}
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

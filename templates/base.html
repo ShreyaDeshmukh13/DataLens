@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataLens — Modern SaaS Analytics</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='1.1') }}">
+</head>
+<body>
+    
+    {% if session.get('user') %}
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='logo.svg') }}" height="32" width="32" alt="DataLens Logo">
+                DataLens
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-label">Main Menu</div>
+            <a href="/" class="sidebar-link {% if active_tab == 'upload' %}active{% endif %}">
+                <span class="link-icon">⬆️</span> Home
+            </a>
+            <a href="/dashboard" class="sidebar-link {% if active_tab == 'dashboard' %}active{% endif %} {% if not has_data %}disabled{% endif %}">
+                <span class="link-icon">📊</span> Dashboard
+            </a>
+            <a href="/analyze" class="sidebar-link {% if active_tab == 'analyze' %}active{% endif %} {% if not has_data %}disabled{% endif %}">
+                <span class="link-icon">📈</span> Analytics
+            </a>
+            
+            <div class="nav-label" style="margin-top: 24px;">Data Operations</div>
+            <a href="/clean" class="sidebar-link {% if active_tab == 'clean' %}active{% endif %} {% if not has_data %}disabled{% endif %}">
+                <span class="link-icon">✨</span> Clean Data
+            </a>
+            <a href="/visualize" class="sidebar-link {% if active_tab == 'visualize' %}active{% endif %} {% if not has_data %}disabled{% endif %}">
+                <span class="link-icon">🎨</span> Visualize
+            </a>
+        </nav>
+    </aside>
+    {% endif %}
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper" {% if not session.get('user') %}style="margin-left: 0;"{% endif %}>
+        
+        {% if session.get('user') %}
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="breadcrumb">
+                <span>Home</span>
+                <span class="breadcrumb-sep">/</span>
+                <span class="current">{% block topbar_name %}Dashboard{% endblock %}</span>
+            </div>
+
+            <div class="topbar-actions">
+                {% if filename %}
+                <span class="badge purple">Dataset: {{ filename }}</span>
+                <a href="/download" class="btn-primary" style="padding: 6px 14px; font-size:0.8rem; border-radius:6px; color:#000;">Download CSV</a>
+                <a href="/reset" class="btn-secondary" style="padding: 4px 10px; font-size:0.8rem; border-radius:6px; color:#F87171; border-color: rgba(248,113,113,0.3);">Reset Dataset</a>
+                {% endif %}
+                <button class="btn-icon" id="settings-toggle">⚙️</button>
+                <div style="position: relative;">
+                    <div class="avatar" id="profile-toggle">
+                        <img src="https://ui-avatars.com/api/?name=Admin+User&background=8B5CF6&color=fff" alt="User">
+                    </div>
+                    <div class="dropdown-menu" id="profile-dropdown">
+                        <div style="padding: 12px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px;">
+                            <div style="font-weight: 600; color: var(--text-primary);">{{ session.get('user') }}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">User</div>
+                        </div>
+                        <div class="dropdown-item" onclick="loadDashboard()">📂 Saved Dashboards</div>
+                        <div class="dropdown-item" onclick="exportData()">⬇️ Export Data</div>
+                        <div style="height: 1px; background: var(--border); margin: 8px 0;"></div>
+                        <div class="dropdown-item" style="color: #F87171;" onclick="logoutUser()">🚪 Logout</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+
+    <div id="toast-container" class="toast-container"></div>
+    
+    {% if session.get('user') %}
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="font-size: 1.25rem; color: var(--text-primary);">Dashboard Settings</h2>
+                <button class="modal-close" id="settings-close">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Theme</label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" style="flex: 1;" onclick="setTheme('dark')">🌙 Dark</button>
+                    <button class="btn btn-secondary" style="flex: 1;" onclick="setTheme('light')">☀️ Light</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Accent Color</label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" style="flex: 1; border-color: var(--accent-cyan);" onclick="setAccent('cyan')">Cyan</button>
+                    <button class="btn btn-secondary" style="flex: 1; border-color: var(--accent-purple);" onclick="setAccent('purple')">Purple</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Chart Options</label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-top: 8px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-gridlines" checked onchange="toggleGridlines(this.checked)"> Show Gridlines
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-top: 8px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-legend" checked onchange="toggleLegend(this.checked)"> Show Legend
+                </label>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+            <button class="btn btn-secondary btn-full" style="color: #f87171; border-color: rgba(248,113,113,0.3);" onclick="window.location.href='/reset'">Reset Dashboard</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(11, 15, 25, 0.8); z-index:9999; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="width: 50px; height: 50px; border: 4px solid var(--border); border-top-color: var(--accent-cyan); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div style="margin-top: 20px; color: var(--text-primary); font-weight: 600; font-size: 1.1rem;">Processing Data...</div>
+    </div>
+    
+    <script>
+        // Attach loading spinner to form submissions
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if(this.method.toUpperCase() === 'POST') {
+                    document.getElementById('loading-overlay').style.display = 'flex';
+                }
+            });
+        });
+
+        // Toast Notifications
+        function showToast(message, type="success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div>${message}</div>
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">&times;</button>
+            `;
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => toast.classList.add('active'));
+            setTimeout(() => {
+                toast.classList.remove('active');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+
+        {% if message %}
+            showToast("{{ message|safe }}", "{% if 'Error' in message or '⚠️' in message %}error{% else %}success{% endif %}");
+        {% endif %}
+
+        // Dropdown toggle
+        const profileToggle = document.getElementById('profile-toggle');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        if(profileToggle) {
+            profileToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if(!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
+                    profileDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Modal Logic
+        const settingsToggle = document.getElementById('settings-toggle');
+        const settingsModal = document.getElementById('settings-modal');
+        const settingsClose = document.getElementById('settings-close');
+        
+        if(settingsToggle && settingsModal) {
+            settingsToggle.addEventListener('click', () => settingsModal.classList.add('active'));
+            settingsClose.addEventListener('click', () => settingsModal.classList.remove('active'));
+            settingsModal.addEventListener('click', (e) => {
+                if(e.target === settingsModal) settingsModal.classList.remove('active');
+            });
+        }
+
+        // Theme Setters
+        function setTheme(theme) {
+            if(theme === 'light') {
+                document.documentElement.style.setProperty('--bg-primary', '#F9FAFB');
+                document.documentElement.style.setProperty('--container', 'rgba(255, 255, 255, 0.9)');
+                document.documentElement.style.setProperty('--text-primary', '#111827');
+                document.documentElement.style.setProperty('--text-secondary', '#4B5563');
+                document.documentElement.style.setProperty('--border', 'rgba(0, 0, 0, 0.1)');
+            } else {
+                document.documentElement.style.setProperty('--bg-primary', '#050505');
+                document.documentElement.style.setProperty('--container', '#0F0F0F');
+                document.documentElement.style.setProperty('--text-primary', '#EDEDED');
+                document.documentElement.style.setProperty('--text-secondary', '#888888');
+                document.documentElement.style.setProperty('--border', '#1A1A1A');
+            }
+        }
+
+        function setAccent(color) {
+            if(color === 'cyan') {
+                document.documentElement.style.setProperty('--accent-cyan', '#22C55E'); // Overridden to Green
+                document.documentElement.style.setProperty('--accent-purple', '#A855F7');
+            } else {
+                document.documentElement.style.setProperty('--accent-cyan', '#A855F7'); 
+                document.documentElement.style.setProperty('--accent-purple', '#22C55E');
+            }
+        }
+        
+        // Chart Options Mock for demonstration
+        function toggleGridlines(show) {
+            showToast(show ? "Gridlines enabled" : "Gridlines disabled", "success");
+        }
+        function toggleLegend(show) {
+            showToast(show ? "Legend enabled" : "Legend disabled", "success");
+        }
+
+        // Profile Dropdown Actions
+        function loadDashboard() {
+            fetch('/load_dashboard_simulate', { method: 'POST', credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.error) showToast(data.error, "error");
+                    else {
+                        showToast(data.message, "success");
+                        sessionStorage.setItem('dashboard_recovery_state', JSON.stringify(data.state));
+                        window.location.href = '/dashboard';
+                    }
+                });
+            document.getElementById('profile-dropdown').classList.remove('active');
+        }
+
+        function exportData() {
+            const isDataLoaded = {{ 'true' if has_data else 'false' }};
+            document.getElementById('profile-dropdown').classList.remove('active');
+            
+            if (isDataLoaded) {
+                window.location.href = '/export';
+                setTimeout(() => showToast("Export initiated", "success"), 500); 
+            } else {
+                showToast("No data available to export", "error");
+            }
+        }
+
+        function logoutUser() {
+            fetch('/logout', { method: 'POST', credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    showToast(data.message, "success");
+                    setTimeout(() => window.location.href = '/', 1500);
+                });
+            document.getElementById('profile-dropdown').classList.remove('active');
+        }
+
+        // Download Chart functionality
+        function downloadChart(btn) {
+            const container = btn.closest('.chart-wrapper');
+            const graphDiv = container.querySelector('.js-plotly-plot');
+            if (graphDiv) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '⏳ Saving...';
+                if(typeof Plotly !== 'undefined') {
+                    Plotly.downloadImage(graphDiv, {format: 'png', width: 1200, height: 800, filename: 'datalens_chart'})
+                        .then(() => { 
+                            btn.innerHTML = originalText; 
+                            showToast('Chart downloaded successfully!', 'success'); 
+                        })
+                        .catch(() => { 
+                            btn.innerHTML = originalText; 
+                            showToast('Failed to download chart', 'error'); 
+                        });
+                } else {
+                    btn.innerHTML = originalText; 
+                    showToast('Plotly library not loaded', 'error');
+                }
+            } else {
+                showToast("Chart not fully loaded yet.", "error");
+            }
+        }
+    </script>
+</body>
+</html>

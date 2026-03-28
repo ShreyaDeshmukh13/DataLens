@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block topbar_name %}Home{% endblock %}
+
+{% block content %}
+<div class="page-title">Data Upload</div>
+
+<div class="dashboard-grid">
+    <div class="card" style="grid-column: 1 / -1; padding: 40px 24px;">
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+                <div class="upload-icon">☁️</div>
+                <h3 style="font-size: 1.4rem; color: var(--text-primary); font-weight: 700; margin-bottom: 8px;">Upload your dataset</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Drag and drop your CSV file here or click to browse.</p>
+                <div style="display:inline-block; padding: 10px 24px; background: rgba(139,92,246,0.1); border: 1px solid var(--accent-purple); color: var(--accent-purple); border-radius: 8px; font-weight: 600;">Browse Files</div>
+                <p style="font-size:0.75rem; color: var(--text-secondary); opacity: 0.6; margin-top: 20px;">Support for standard CSV formats up to 50MB.</p>
+            </div>
+            <input type="file" name="file" accept=".csv" required id="file-input" style="display:none;" onchange="document.getElementById('file-name').textContent = 'Selected: ' + this.files[0].name">
+            <div id="file-name" style="text-align: center; color: var(--accent-cyan); font-weight: 600; margin-bottom: 24px; font-size: 0.95rem;"></div>
+            
+            <div style="max-width: 400px; margin: 0 auto;">
+                <button type="submit" class="btn btn-primary btn-full" style="padding: 14px; font-size: 1.05rem;">Start Analysis →</button>
+            </div>
+        </form>
+        
+        <div style="margin-top: 32px; border-top: 1px solid var(--border); padding-top: 32px; text-align: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">Or try one of our sample datasets</p>
+            <div style="display: flex; gap: 16px; justify-content: center;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('loading-overlay').style.display='flex'; window.location.href='/load_sample/sales'">📊 Sales Data</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('loading-overlay').style.display='flex'; window.location.href='/load_sample/hr'">👥 HR Analytics</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if preview_html %}
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Dataset Explanation</h2>
+        </div>
+        <ul style="list-style-type:none; padding:0; line-height:1.8;">
+            <li><strong style="color: var(--text-secondary);">Rows:</strong> {{ shape.rows }}</li>
+            <li><strong style="color: var(--text-secondary);">Columns:</strong> {{ shape.columns }}</li>
+            <li><strong style="color: var(--text-secondary);">Numeric:</strong> {{ shape.numeric_cols }}</li>
+            <li><strong style="color: var(--text-secondary);">Categorical:</strong> {{ shape.categorical_cols }}</li>
+            <li><strong style="color: var(--text-secondary);">Memory:</strong> {{ shape.memory_mb }} MB</li>
+        </ul>
+        {% if suggestion %}
+        <div style="margin-top: 16px; padding: 12px; background: rgba(34,211,238,0.1); border-left: 4px solid var(--accent-cyan); border-radius: 4px;">
+            <strong style="color: var(--accent-cyan);">Suggested Analysis:</strong> <br/> <div style="margin-top:4px;">{{ suggestion }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if warnings_list %}
+    <div class="card" style="border-color: rgba(248,113,113,0.3); background: linear-gradient(145deg, var(--container), rgba(248,113,113,0.05));">
+        <div class="card-header">
+            <h2 class="card-title" style="color: #f87171;">⚠️ Problem Detection</h2>
+        </div>
+        <ul style="list-style-type:none; padding:0; line-height:1.8;">
+            {% for w in warnings_list %}
+            <li style="color: #fca5a5; margin-bottom: 8px; display:flex; gap: 8px; font-size: 0.9rem;">
+                <span style="opacity: 0.6;">•</span> <span>{{ w.message }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        <button class="btn btn-secondary btn-full" style="margin-top: 16px; border-color: #f87171; color: #f87171;" onclick="window.location.href='/clean'">Clean Data Now</button>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent Upload Preview</h2>
+        <span class="badge cyan">First 5 rows</span>
+    </div>
+    <div class="table-container">
+        {{ preview_html|safe }}
+    </div>
+</div>
+{% endif %}
+
+<script>
+    const zone = document.getElementById('upload-zone');
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--accent-purple)'; zone.style.background = 'rgba(139,92,246,0.05)'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border)'; zone.style.background = 'rgba(255,255,255,0.01)'; });
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.style.borderColor = 'var(--border)'; zone.style.background = 'rgba(255,255,255,0.01)';
+        const fileInput = document.getElementById('file-input');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            document.getElementById('file-name').textContent = 'Selected: ' + e.dataTransfer.files[0].name;
+        }
+    });
+</script>
+{% endblock %}

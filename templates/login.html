@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block topbar_name %}Login{% endblock %}
+
+{% block content %}
+<div style="display: flex; align-items: center; justify-content: center; min-height: 80vh;">
+    <div class="card" style="width: 100%; max-width: 420px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div style="text-align: center; margin-bottom: 32px;">
+            <div class="logo-icon" style="font-size: 2.5rem; margin-bottom: 16px; color: var(--accent-purple);">▲</div>
+            <h2 style="font-size: 1.8rem; font-weight: 700;">Welcome back</h2>
+            <p style="color: var(--text-secondary); margin-top: 8px;">Log in to access your dashboard</p>
+        </div>
+        
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <label style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase;">Username</label>
+                <input type="text" name="username" required style="width: 100%; padding: 12px; border-radius: 8px; font-size: 1rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-primary); margin-top: 8px;">
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase;">Password</label>
+                <input type="password" name="password" required style="width: 100%; padding: 12px; border-radius: 8px; font-size: 1rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-primary); margin-top: 8px;">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 32px; padding: 14px; font-size: 1.05rem; background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan)); border: none;">Sign In →</button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 24px; color: var(--text-secondary); font-size: 0.9rem;">
+            Don't have an account? <a href="/signup" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600;">Sign up</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

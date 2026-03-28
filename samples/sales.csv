@@ -1,0 +1,11 @@
+date,region,product,revenue,units_sold,satisfaction_score
+2025-01-01,North,Laptop,5200.5,15,4.5
+2025-01-02,South,Phone,3100.0,30,4.2
+2025-01-03,East,Tablet,4500.0,22,3.8
+2025-01-04,West,Monitor,2100.5,45,4.9
+2025-01-05,North,Phone,3500.0,40,4.6
+2025-01-06,South,Laptop,,12,3.5
+2025-01-07,East,Monitor,2400.0,50,4.1
+2025-01-08,West,Tablet,4800.5,25,3.9
+2025-01-09,North,Monitor,2200.0,42,4.4
+2025-01-10,South,Laptop,,14,3.7

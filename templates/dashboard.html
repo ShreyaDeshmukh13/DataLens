@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block topbar_name %}Dashboard{% endblock %}
+
+{% block content %}
+{% if not has_data %}
+<div class="card empty-state">
+    <div class="empty-icon">📂</div>
+    <h3>No dataset loaded</h3>
+    <p>Please <a href="/">upload a CSV file</a> first.</p>
+</div>
+{% else %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div class="page-title" style="margin-bottom: 0;">Dashboard Overview</div>
+</div>
+
+<!-- NLP Query System -->
+<div class="card" style="margin-bottom: 24px; padding: 24px; background: linear-gradient(145deg, var(--container), rgba(139,92,246,0.05)); border-color: rgba(139,92,246,0.3);">
+    <div class="card-header">
+        <h2 class="card-title"><span style="font-size: 1.2rem;">🤖</span> Ask DataLens</h2>
+        <span class="badge purple">AI Assistant</span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: center;">
+        <input type="text" id="nlq-input" placeholder='e.g., "Show highest revenue by region", "Plot distribution of satisfaction_score"' style="flex:1; padding: 16px; font-size: 1rem; border-radius: 8px;">
+        <button id="nlq-btn" class="btn btn-purple" style="padding: 16px 32px; font-size: 1rem;">Ask →</button>
+    </div>
+    <div id="nlq-message" style="margin-top: 12px; font-size: 0.9rem; color: var(--accent-cyan); display: none;"></div>
+    <div id="nlq-result" style="margin-top: 24px; display: none; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; overflow-x: auto;">
+        <!-- Results injected here -->
+    </div>
+</div>
+
+
+<div class="dashboard-grid" style="grid-template-columns: 280px 1fr;">
+    <!-- Filter Sidebar Column -->
+    <div>
+        <div class="card" style="padding: 16px;">
+            <div class="card-header" style="margin-bottom: 24px;">
+                <h2 class="card-title">Filter Workspace</h2>
+                <span class="badge cyan">Active</span>
+            </div>
+            
+            <form method="POST" action="/filter">
+                {% if num_filters %}
+                <div style="margin-bottom: 16px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Numeric Fields</div>
+                {% for nf in num_filters %}
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem;">{{ nf.name }}</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" step="any" name="__min_{{ nf.name }}" placeholder="Min ({{ nf.min|round(1) }})" style="font-size: 0.75rem; padding: 6px 8px;">
+                        <input type="number" step="any" name="__max_{{ nf.name }}" placeholder="Max ({{ nf.max|round(1) }})" style="font-size: 0.75rem; padding: 6px 8px;">
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                {% if cat_filters %}
+                <div style="margin-bottom: 16px; margin-top: 24px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Categories</div>
+                {% for cf in cat_filters %}
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem;">{{ cf.name }}</label>
+                    <select name="__cat_{{ cf.name }}" style="font-size: 0.8rem; padding: 6px 8px;">
+                        <option value="">-- All --</option>
+                        {% for val in cf.unique %}
+                        <option value="{{ val }}">{{ val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 16px;">Apply Filters</button>
+            </form>
+            
+            <hr style="border:0; border-top: 1px solid var(--border); margin: 24px 0;">
+            <button id="save-state-btn" class="btn btn-secondary btn-full" style="margin-bottom: 12px;">💾 Save Dashboard State</button>
+        </div>
+    </div>
+    
+    <!-- Main Insights Column (Using internal grid) -->
+    <div>
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+            <!-- Left Sub-column -->
+            <div>
+                <!-- Main Trend Analysis -->
+                {% if charts.get('main') %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Main Trend Analysis</h2>
+                    </div>
+                    <div class="chart-wrapper" style="position: relative; border-radius: var(--radius); overflow: hidden; background: rgba(0,0,0,0.1);">
+                        <button class="btn btn-secondary" style="position: absolute; top: 12px; right: 12px; z-index: 10; padding: 4px 10px; font-size: 0.8rem; background: rgba(17,24,39,0.8); backdrop-filter: blur(4px);" onclick="downloadChart(this)">⬇️ Download</button>
+                        {{ charts['main']|safe }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Extreme Values -->
+                {% if insights.extremes %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Highest Value Columns (Extremes)</h2>
+                        <span class="badge blue">Alerts</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                    <th>Mean</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for e in insights.extremes %}
+                                <tr>
+                                    <td><strong>{{ e.column }}</strong></td>
+                                    <td>{{ e.min }}</td>
+                                    <td style="color: var(--accent-pink); font-weight: 600;">{{ e.max }}</td>
+                                    <td>{{ e.mean }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Key Distribution -->
+                {% if charts.get('dist') %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Key Distribution</h2>
+                    </div>
+                    <div class="chart-wrapper" style="position: relative; border-radius: var(--radius); overflow: hidden; background: rgba(0,0,0,0.1);">
+                        <button class="btn btn-secondary" style="position: absolute; top: 12px; right: 12px; z-index: 10; padding: 4px 10px; font-size: 0.8rem; background: rgba(17,24,39,0.8); backdrop-filter: blur(4px);" onclick="downloadChart(this)">⬇️ Download</button>
+                        {{ charts['dist']|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Right Sub-column -->
+            <div>
+                <!-- Correlation Heatmap -->
+                {% if charts.get('corr') %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Correlation Heatmap</h2>
+                    </div>
+                    <div class="chart-wrapper" style="position: relative; border-radius: var(--radius); overflow: hidden; background: rgba(0,0,0,0.1);">
+                        <button class="btn btn-secondary" style="position: absolute; top: 12px; right: 12px; z-index: 10; padding: 4px 10px; font-size: 0.8rem; background: rgba(17,24,39,0.8); backdrop-filter: blur(4px);" onclick="downloadChart(this)">⬇️ Download</button>
+                        {{ charts['corr']|safe }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Top Categories -->
+                {% if insights.frequencies %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Top Categories</h2>
+                    </div>
+                    {% for f in insights.frequencies %}
+                    <div style="margin-bottom: 24px;">
+                        <div style="font-size:0.85rem; font-weight:600; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">
+                            {{ f.column }}
+                        </div>
+                        {% for v in f.top_values %}
+                        <div style="margin-bottom: 12px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                                <span>{{ v.value }}</span>
+                                <span style="color:var(--text-secondary);">{{ v.count }}</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div class="progress-fill {% if loop.index0 % 3 == 0 %}cyan{% elif loop.index0 % 3 == 1 %}purple{% else %}green{% endif %}" style="width: {{ v.percent }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if not loop.last %}<hr style="border: 0; border-top: 1px solid var(--border); margin: 0 0 20px 0;">{% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Correlation Summary -->
+                {% if insights.correlations %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Correlation Summary</h2>
+                    </div>
+                    <div class="activity-list">
+                        {% for c in insights.correlations[:4] %}
+                        <div class="activity-item">
+                            <div class="activity-icon" style="background: rgba(139,92,246,0.1); color: var(--accent-purple);">🔗</div>
+                            <div class="activity-info">
+                                <div class="activity-title">{{ c.col1 }} & {{ c.col2 }}</div>
+                                <div class="activity-desc">{{ c.strength }}</div>
+                            </div>
+                            <div class="activity-value {% if c.correlation > 0 %}text-success{% else %}text-warning{% endif %}">
+                                {{ c.correlation }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const nlqBtn = document.getElementById("nlq-btn");
+    const nlqInput = document.getElementById("nlq-input");
+    const nlqResult = document.getElementById("nlq-result");
+    const nlqMessage = document.getElementById("nlq-message");
+    const saveStateBtn = document.getElementById("save-state-btn");
+
+    if(nlqBtn) {
+        nlqBtn.addEventListener("click", function() {
+            const query = nlqInput.value;
+            if(!query) return;
+            
+            nlqBtn.innerHTML = "Thinking...";
+            nlqBtn.disabled = true;
+            
+            fetch("/query", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({query: query})
+            }).then(r => r.json()).then(data => {
+                nlqBtn.innerHTML = "Ask →";
+                nlqBtn.disabled = false;
+                
+                if(data.error) {
+                    nlqMessage.style.color = "#f87171";
+                    nlqMessage.textContent = data.error;
+                    nlqMessage.style.display = "block";
+                    nlqResult.style.display = "none";
+                } else {
+                    nlqMessage.style.color = "var(--accent-cyan)";
+                    nlqMessage.textContent = data.message;
+                    nlqMessage.style.display = "block";
+                    nlqResult.innerHTML = data.html_result;
+                    nlqResult.style.display = "block";
+                    
+                    // Re-execute scripts in plotly charts if needed
+                    Array.from(nlqResult.querySelectorAll("script")).forEach(oldScript => {
+                        const newScript = document.createElement("script");
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+            }).catch(e => {
+                nlqBtn.innerHTML = "Ask →";
+                nlqBtn.disabled = false;
+                nlqMessage.style.color = "#f87171";
+                nlqMessage.textContent = "Error making query request";
+                nlqMessage.style.display = "block";
+            });
+        });
+        
+        nlqInput.addEventListener("keydown", function(e) {
+            if(e.key === "Enter") nlqBtn.click();
+        });
+    }
+    
+    if(saveStateBtn) {
+        saveStateBtn.addEventListener("click", function() {
+            saveStateBtn.innerHTML = "Saving...";
+            // We just save current filters as state in this simple implementation
+            const formData = new FormData(document.querySelector("form[action='/filter']"));
+            const state = {};
+            formData.forEach((value, key) => { if(value) state[key] = value });
+            
+            fetch("/save_state", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(state)
+            }).then(r => r.json()).then(data => {
+                saveStateBtn.innerHTML = "💾 " + (data.message || "Saved!");
+                setTimeout(() => saveStateBtn.innerHTML = "💾 Save Dashboard State", 3000);
+            });
+        });
+    }
+
+    // Auto-Recovery Engine
+    const recoveryStateStr = sessionStorage.getItem('dashboard_recovery_state');
+    if (recoveryStateStr) {
+        sessionStorage.removeItem('dashboard_recovery_state');
+        const state = JSON.parse(recoveryStateStr);
+        let populated = false;
+        
+        for (const key in state) {
+            const el = document.querySelector(`[name="${key}"]`);
+            if (el) {
+                el.value = state[key];
+                populated = true;
+            }
+        }
+        
+        if (populated) {
+            const form = document.querySelector("form[action='/filter']");
+            if(form) {
+                const btn = form.querySelector('button[type="submit"]');
+                if(btn) btn.innerHTML = "⏳ Restoring State...";
+                setTimeout(() => form.submit(), 400); // 400ms delay to allow user to see values inject
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block topbar_name %}Analytics{% endblock %}
+
+{% block content %}
+{% if not has_data %}
+<div class="card empty-state">
+    <div class="empty-icon">📂</div>
+    <h3>No dataset loaded</h3>
+    <p>Please <a href="/">upload a CSV file</a> first.</p>
+</div>
+{% else %}
+
+<div class="page-title">Dataset Overview</div>
+
+<!-- Metric Cards (Top Row) -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-title">TOTAL ROWS</div>
+        <div class="metric-value">{{ shape.rows }}</div>
+        <div class="metric-change positive">↑ 14% from last dataset</div>
+        <!-- Simulated Mini Chart -->
+        <svg class="mini-chart" viewBox="0 0 60 30" preserveAspectRatio="none">
+            <polyline fill="none" stroke="var(--accent-cyan)" stroke-width="2" points="0,25 15,10 30,15 45,5 60,10"/>
+        </svg>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-title">TOTAL COLUMNS</div>
+        <div class="metric-value">{{ shape.columns }}</div>
+        <div class="metric-change neutral">− Unchanged</div>
+        <svg class="mini-chart" viewBox="0 0 60 30" preserveAspectRatio="none">
+            <polyline fill="none" stroke="var(--accent-purple)" stroke-width="2" points="0,15 20,15 40,15 60,15"/>
+        </svg>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-title">MISSING VALUES</div>
+        {% set total_missing = missing_values|map(attribute='count')|sum %}
+        <div class="metric-value">{{ total_missing }}</div>
+        <div class="metric-change {% if total_missing == 0 %}positive{% else %}neutral{% endif %}">
+            {% if total_missing == 0 %}✅ Perfect dataset{% else %}⚠️ Attention needed{% endif %}
+        </div>
+        <svg class="mini-chart" viewBox="0 0 60 30" preserveAspectRatio="none">
+            <polyline fill="none" stroke="var(--accent-pink)" stroke-width="2" points="0,5 20,25 40,15 60,30"/>
+        </svg>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-title">DATASET SIZE</div>
+        <div class="metric-value">{{ shape.memory_mb }} MB</div>
+        <div class="metric-change positive">↑ 2.4% vs average</div>
+        <svg class="mini-chart" viewBox="0 0 60 30" preserveAspectRatio="none">
+            <polyline fill="none" stroke="var(--accent-green)" stroke-width="2" points="0,20 20,25 40,10 60,5"/>
+        </svg>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div>
+        <!-- Dataset Preview Table Section -->
+        <div class="card">
+            <div class="card-header" style="margin-bottom: 16px;">
+                <h2 class="card-title">Dataset Preview</h2>
+                <div class="search-bar">
+                    <span>🔍</span>
+                    <input type="text" placeholder="Search rows...">
+                </div>
+            </div>
+            <div class="table-container">
+                {{ preview_html|safe }}
+            </div>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Summary Statistics</h2>
+            </div>
+            <div class="table-container">
+                {{ stats_html|safe }}
+            </div>
+        </div>
+    </div>
+    
+    <div>
+        <!-- Column Information & Types -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Data Types</h2>
+            </div>
+            <div class="activity-list">
+                {% for col in column_info %}
+                <div class="activity-item">
+                    <div class="activity-icon" style="color: var(--accent-cyan); background: rgba(34,211,238,0.1);">🏷️</div>
+                    <div class="activity-info">
+                        <div class="activity-title">{{ col.name }}</div>
+                        <div class="activity-desc">{{ col.unique }} unique values</div>
+                    </div>
+                    <div>
+                        <span class="badge purple" style="font-family: monospace;">{{ col.dtype }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Missing Values Progress -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Missing Data</h2>
+            </div>
+            {% set has_missing = missing_values|selectattr('count', 'gt', 0)|list|length > 0 %}
+            {% if has_missing %}
+                {% for mv in missing_values %}
+                    {% if mv.count > 0 %}
+                    <div style="margin-bottom: 16px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                            <span style="font-weight:600;">{{ mv.column }}</span>
+                            <span style="color:var(--text-secondary);">{{ mv.count }} ({{ mv.percent }}%)</span>
+                        </div>
+                        <div class="progress-bg">
+                            <div class="progress-fill pink" style="width: {{ mv.percent }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-section">
+                    <span style="color: var(--accent-green); font-weight:600;">✅ 0% Missing Values</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
